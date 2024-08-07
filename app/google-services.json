@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "818756653357",
+    "project_id": "fairy-tales-88fe2",
+    "storage_bucket": "fairy-tales-88fe2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:818756653357:android:1d806e956dd95f696683a4",
+        "android_client_info": {
+          "package_name": "com.dgioto.downloadfairytales"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHAjjl-5NrGDOY4zbTXqDvqE2o4paxVFs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:818756653357:android:051e179c76e30e966683a4",
+        "android_client_info": {
+          "package_name": "com.dgioto.fairytalesinukrainian"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHAjjl-5NrGDOY4zbTXqDvqE2o4paxVFs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
