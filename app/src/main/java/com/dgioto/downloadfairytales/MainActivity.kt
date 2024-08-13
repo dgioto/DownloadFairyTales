@@ -1,16 +1,21 @@
 package com.dgioto.downloadfairytales
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,11 +25,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+
+import coil.compose.AsyncImage
+
 import com.dgioto.downloadfairytales.ui.theme.DownloadFairyTalesTheme
+
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.storage
+
+import java.io.ByteArrayOutputStream
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,14 +54,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen() {
+    val context = LocalContext.current
     // We get access to the fire base object
     val fs = Firebase.firestore
+    //Create a Firebase file storage object and create an Image folder inside the storage
+    val storage = Firebase.storage.reference.child("images")
     val list = remember {
         mutableStateOf(emptyList<FairyTale>())
     }
 
     // Write FairyTail objects to the list and we constantly monitor updates
-    fs.collection("FairyTales").addSnapshotListener {snapShot, exception ->
+    fs.collection("FairyTales").addSnapshotListener { snapShot, exception ->
         list.value = snapShot?.toObjects(FairyTale::class.java) ?: emptyList()
     }
 
@@ -57,20 +75,33 @@ fun MainScreen() {
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.8f)
+                .fillMaxHeight(0.9f)
         ) {
             items(list.value) { fairyTale ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(10.dp)
+                        .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
                 ) {
-                    Text(
-                        text = fairyTale.name,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentWidth().padding(15.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = fairyTale.imageUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(90.dp)
+                                .padding(start = 10.dp)
+                        )
+
+                        Text(
+                            text = fairyTale.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentWidth()
+                        )
+                    }
                 }
             }
         }
@@ -79,19 +110,14 @@ fun MainScreen() {
 
         Button(modifier = Modifier
             .fillMaxWidth()
-            .padding(10.dp),
+            .padding(20.dp),
             onClick = {
-                // Adding a FairyTale object with attributes to the Fairy Tales collection
-                fs.collection("FairyTales")
-                    .document().set(
-                        FairyTale(
-                            "My Book",
-                            "111111111",
-                            "100",
-                            "fiction",
-                            "url"
-                        )
-                    )
+                val task = storage.child("cat.jpg").putBytes(bitmapToByteArray(context))
+                task.addOnSuccessListener { upLoadTask ->
+                    upLoadTask.metadata?.reference?.downloadUrl?.addOnCompleteListener { uriTask ->
+                        saveFairyTale(fs, uriTask.result.toString())
+                    }
+                }
             }) {
             // Button name
             Text(text = "Add Fairy Tale")
@@ -99,10 +125,31 @@ fun MainScreen() {
     }
 }
 
+private fun bitmapToByteArray(context: Context): ByteArray {
+    val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.cat)
+    val baos = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+    return baos.toByteArray()
+}
+
+private fun saveFairyTale(fs: FirebaseFirestore, url: String) {
+    // Adding a FairyTale object with attributes to the Fairy Tales collection
+    fs.collection("FairyTales")
+        .document().set(
+            FairyTale(
+                "My Book",
+                "111111111",
+                "100",
+                "fiction",
+                url
+            )
+        )
+}
+
 //@Preview(showBackground = true)
 //@Composable
-//fun GreetingPreview() {
+//fun FairyTalesPreview() {
 //    DownloadFairyTalesTheme {
-//        Greeting("Android")
+//        MainScreen()
 //    }
 //}
