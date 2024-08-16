@@ -3,9 +3,13 @@ package com.dgioto.downloadfairytales
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,13 +31,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-
 import coil.compose.AsyncImage
-
 import com.dgioto.downloadfairytales.ui.theme.DownloadFairyTalesTheme
-
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
@@ -45,20 +45,37 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            // We get access to the fire base object
+            val fs = Firebase.firestore
+            //Create a Firebase file storage object and create an Image folder inside the storage
+            val storage = Firebase.storage.reference.child("images")
+
+            val launcher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+
+                val task = storage.child("test_image.jpg").putBytes(bitmapToByteArray(this, uri))
+                task.addOnSuccessListener { upLoadTask ->
+                    upLoadTask.metadata?.reference?.downloadUrl?.addOnCompleteListener { uriTask ->
+                        saveFairyTale(fs, uriTask.result.toString())
+                    }
+                }
+            }
+
             DownloadFairyTalesTheme {
-                MainScreen()
+                MainScreen(fs){
+                    launcher.launch(PickVisualMediaRequest(
+                        mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
+                    ))
+                }
             }
         }
     }
 }
 
 @Composable
-fun MainScreen() {
-    val context = LocalContext.current
-    // We get access to the fire base object
-    val fs = Firebase.firestore
-    //Create a Firebase file storage object and create an Image folder inside the storage
-    val storage = Firebase.storage.reference.child("images")
+fun MainScreen(fs: FirebaseFirestore, onClick: () -> Unit) {
     val list = remember {
         mutableStateOf(emptyList<FairyTale>())
     }
@@ -111,22 +128,16 @@ fun MainScreen() {
         Button(modifier = Modifier
             .fillMaxWidth()
             .padding(20.dp),
-            onClick = {
-                val task = storage.child("cat.jpg").putBytes(bitmapToByteArray(context))
-                task.addOnSuccessListener { upLoadTask ->
-                    upLoadTask.metadata?.reference?.downloadUrl?.addOnCompleteListener { uriTask ->
-                        saveFairyTale(fs, uriTask.result.toString())
-                    }
-                }
-            }) {
+            onClick = { onClick() }) {
             // Button name
             Text(text = "Add Fairy Tale")
         }
     }
 }
 
-private fun bitmapToByteArray(context: Context): ByteArray {
-    val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.cat)
+private fun bitmapToByteArray(context: Context, uri: Uri): ByteArray {
+    val inputStream = context.contentResolver.openInputStream(uri)
+    val bitmap = BitmapFactory.decodeStream(inputStream)
     val baos = ByteArrayOutputStream()
     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
     return baos.toByteArray()
@@ -145,11 +156,3 @@ private fun saveFairyTale(fs: FirebaseFirestore, url: String) {
             )
         )
 }
-
-//@Preview(showBackground = true)
-//@Composable
-//fun FairyTalesPreview() {
-//    DownloadFairyTalesTheme {
-//        MainScreen()
-//    }
-//}
